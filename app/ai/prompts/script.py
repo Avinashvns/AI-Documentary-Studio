@@ -14,18 +14,34 @@ class ScriptPrompt:
                 (
                     "human",
                     """
-Using the following research:
+Create a professional documentary narration.
 
-{research}
+Topic:
+{topic}
 
-Write a professional documentary narration.
+Summary:
+{summary}
 
-Requirements:
+Timeline:
+{timeline}
 
-- Strong hook
-- Chronological flow
-- Cinematic narration
-- Engaging ending
+Characters:
+{characters}
+
+Sources:
+{sources}
+
+Language:
+{language}
+
+Generate a documentary script with:
+
+1. Title
+2. Hook
+3. Introduction
+4. Multiple Sections
+5. Ending
+6. Call To Action
 """.strip(),
                 ),
             ]
