@@ -4,10 +4,8 @@ from app.ai.prompts.system import SYSTEM_PROMPT
 
 
 class ResearchPrompt:
-
     @staticmethod
     def build() -> ChatPromptTemplate:
-
         return ChatPromptTemplate.from_messages(
             [
                 ("system", SYSTEM_PROMPT),
