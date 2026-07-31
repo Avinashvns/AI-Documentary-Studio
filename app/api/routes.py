@@ -1,35 +1,36 @@
 from fastapi import APIRouter
+
 from app.config.settings import settings
-from app.core.exceptions import AppException
+from app.core.response import success_response
 
 router = APIRouter()
 
 
-@router.get("/", tags=["Root"])
+@router.get("/")
 async def root():
-    return {
-        "message": f"Welcome to {settings.app_name}"
-    }
+    return success_response(
+        message="Welcome to AI Documentary Studio",
+        data={
+            "application": settings.app_name,
+            "version": settings.app_version,
+        },
+    )
 
 
-@router.get("/health", tags=["Health"])
+@router.get("/health")
 async def health():
-    return {
-        "status": "healthy"
-    }
+    return success_response(
+        message="Health check successful",
+        data={
+            "status": "healthy",
+        },
+    )
 
 
-@router.get("/version", tags=["System"])
+@router.get("/version")
 async def version():
-    return {
-        "version": settings.app_version
-    }
-
-@router.get("/test-error")
-async def test_error():
-
-    raise AppException(
-        status_code=404,
-        code="DOCUMENT_NOT_FOUND",
-        message="Requested document does not exist.",
+    return success_response(
+        data={
+            "version": settings.app_version,
+        }
     )
