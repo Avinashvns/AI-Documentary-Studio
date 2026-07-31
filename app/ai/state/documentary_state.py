@@ -1,5 +1,10 @@
 from typing import TypedDict
 
+from app.schemas.research import ResearchResult
+from app.schemas.script import ScriptResult
+from app.schemas.scene import Scene
+from app.schemas.image_prompt import ImagePrompt
+
 
 class DocumentaryState(TypedDict):
     """
@@ -13,17 +18,17 @@ class DocumentaryState(TypedDict):
     style: str
 
     # Research
-    research: str
+    research: ResearchResult | None
 
     # Script
-    script: str
+    script: ScriptResult | None
 
     # Scene Planning
-    scenes: list
+    scenes: list[Scene]
 
     # Image Generation
-    image_prompts: list
-    images: list
+    image_prompts: list[ImagePrompt]
+    images: list[str]
 
     # Voice
     narration: str
