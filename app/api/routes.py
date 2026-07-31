@@ -3,6 +3,8 @@ from fastapi import APIRouter
 from app.config.settings import settings
 from app.core.response import success_response
 
+from app.config.constants import HEALTHY_STATUS
+
 router = APIRouter()
 
 
@@ -22,7 +24,7 @@ async def health():
     return success_response(
         message="Health check successful",
         data={
-            "status": "healthy",
+            "status": HEALTHY_STATUS,
         },
     )
 
@@ -34,3 +36,5 @@ async def version():
             "version": settings.app_version,
         }
     )
+
+
