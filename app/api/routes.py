@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.config.settings import settings
+from app.core.exceptions import AppException
 
 router = APIRouter()
 
@@ -23,3 +24,12 @@ async def version():
     return {
         "version": settings.app_version
     }
+
+@router.get("/test-error")
+async def test_error():
+
+    raise AppException(
+        status_code=404,
+        code="DOCUMENT_NOT_FOUND",
+        message="Requested document does not exist.",
+    )
