@@ -101,8 +101,15 @@ class ComfyUIImageProvider(ImageProvider):
         stdout: str,
     ) -> Path:
         """
-        Extract generated image path from Comfy CLI NDJSON output.
+        Extract the absolute generated image path
+        from Comfy CLI NDJSON output.
+
+        Priority:
+        1. Final envelope data.outputs
+        2. Output event URL
         """
+
+        events = []
 
         for line in stdout.splitlines():
             line = line.strip()
@@ -115,47 +122,63 @@ class ComfyUIImageProvider(ImageProvider):
             except json.JSONDecodeError:
                 continue
 
-            path = ComfyUIImageProvider._find_image_path(
-                event
-            )
+            events.append(event)
 
-            if path is not None:
-                return Path(path)
+        # Prefer the final CLI envelope.
+        for event in reversed(events):
+            if event.get("type") != "envelope":
+                continue
+
+            data = event.get("data") or {}
+            outputs = data.get("outputs") or []
+
+            if outputs:
+                return Path(outputs[0])
+
+        # Fallback to the output event.
+        for event in reversed(events):
+            if event.get("type") != "output":
+                continue
+
+            output = event.get("url")
+
+            if output:
+                return Path(output)
 
         raise ImageProviderError(
             "ComfyUI completed but no image output was found."
         )
 
-    @staticmethod
-    def _find_image_path(
-        value,
-    ) -> str | None:
-        """
-        Recursively search a Comfy CLI event for an image path.
-        """
+    # @staticmethod
+    # def _find_image_path(
+    #     value,
+    # ) -> str | None:
+    #     """
+    #     Recursively search a Comfy CLI event for an image path.
+    #     """
 
-        if isinstance(value, str):
-            if value.lower().endswith(
-                (".png", ".jpg", ".jpeg", ".webp")
-            ):
-                return value
+    #     if isinstance(value, str):
+    #         if value.lower().endswith(
+    #             (".png", ".jpg", ".jpeg", ".webp")
+    #         ):
+    #             return value
 
-        elif isinstance(value, dict):
-            for item in value.values():
-                result = ComfyUIImageProvider._find_image_path(
-                    item
-                )
+    #     elif isinstance(value, dict):
+    #         for item in value.values():
+    #             result = ComfyUIImageProvider._find_image_path(
+    #                 item
+    #             )
 
-                if result is not None:
-                    return result
+    #             if result is not None:
+    #                 return result
 
-        elif isinstance(value, list):
-            for item in value:
-                result = ComfyUIImageProvider._find_image_path(
-                    item
-                )
+    #     elif isinstance(value, list):
+    #         for item in value:
+    #             result = ComfyUIImageProvider._find_image_path(
+    #                 item
+    #             )
 
-                if result is not None:
-                    return result
+    #             if result is not None:
+    #                 return result
 
-        return None
+    #     return None

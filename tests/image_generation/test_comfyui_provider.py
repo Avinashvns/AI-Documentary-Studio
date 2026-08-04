@@ -36,15 +36,32 @@ def test_build_command():
 
 def test_extract_output_path():
     stdout = """
-{"schema":"event/1","type":"progress","value":100}
-{"schema":"event/1","type":"output","data":{"path":"D:\\\\AI Generater\\\\ComfyUI\\\\output\\\\ComfyUI_00005_.png"}}
+{"schema":"event/1","type":"output","url":"D:\\\\AI Generater\\\\ComfyUI\\\\output\\\\ComfyUI_00009_.png"}
+{"schema":"envelope/1","type":"envelope","ok":true,"data":{"outputs":["D:\\\\AI Generater\\\\ComfyUI\\\\output\\\\ComfyUI_00009_.png"]}}
 """
 
     path = ComfyUIImageProvider._extract_output_path(
         stdout
     )
 
-    assert path.name == "ComfyUI_00005_.png"
+    assert str(path) == (
+        "D:\\AI Generater\\ComfyUI\\output\\"
+        "ComfyUI_00009_.png"
+    )
+
+def test_extract_output_path_prefers_envelope():
+    stdout = """
+{"schema":"event/1","type":"output","url":"old.png"}
+{"schema":"envelope/1","type":"envelope","ok":true,"data":{"outputs":["D:\\\\ComfyUI\\\\output\\\\final.png"]}}
+"""
+
+    path = ComfyUIImageProvider._extract_output_path(
+        stdout
+    )
+
+    assert str(path) == (
+        "D:\\ComfyUI\\output\\final.png"
+    )
 
 
 def test_missing_output_raises_error():
@@ -64,7 +81,8 @@ def test_missing_output_raises_error():
 )
 def test_generate(mock_run):
     mock_run.return_value.stdout = """
-{"schema":"event/1","type":"output","data":{"path":"D:\\\\AI Generater\\\\ComfyUI\\\\output\\\\ComfyUI_00006_.png"}}
+{"schema":"event/1","type":"output","url":"D:\\\\AI Generater\\\\ComfyUI\\\\output\\\\ComfyUI_00010_.png"}
+{"schema":"envelope/1","type":"envelope","ok":true,"data":{"outputs":["D:\\\\AI Generater\\\\ComfyUI\\\\output\\\\ComfyUI_00010_.png"]}}
 """
 
     provider = ComfyUIImageProvider()
@@ -81,8 +99,9 @@ def test_generate(mock_run):
     assert result.format == "png"
     assert result.provider == "local"
 
-    assert result.path.endswith(
-        "ComfyUI_00006_.png"
+    assert result.path == (
+        "D:\\AI Generater\\ComfyUI\\output\\"
+        "ComfyUI_00010_.png"
     )
 
     mock_run.assert_called_once()
