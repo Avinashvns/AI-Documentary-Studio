@@ -5,6 +5,7 @@ from app.agents.script import ScriptAgent
 
 from app.ai.state.documentary_state import DocumentaryState
 from app.schemas.request import DocumentaryRequest
+from app.image_generation.services import ImageGenerationService
 
 
 class DocumentaryNodes:
@@ -14,11 +15,16 @@ class DocumentaryNodes:
         script_agent: ScriptAgent,
         scene_planner_agent: ScenePlannerAgent,
         image_prompt_agent: ImagePromptAgent,
+        image_generation_service: ImageGenerationService | None = None,
     ):
         self.research_agent = research_agent
         self.script_agent = script_agent
         self.scene_planner_agent = scene_planner_agent
         self.image_prompt_agent = image_prompt_agent
+        self.image_generation_service = (
+            image_generation_service
+            or ImageGenerationService()
+        )
 
     def research_node(
         self,
@@ -90,4 +96,32 @@ class DocumentaryNodes:
 
         return {
             "image_prompts": image_prompts,
+        }
+
+
+    def image_generation_node(
+        self,
+        state: DocumentaryState,
+    ) -> dict:
+        image_prompts = state.get(
+            "image_prompts",
+            [],
+        )
+
+        if not image_prompts:
+            return {
+                "images": [],
+            }
+
+        generated_images = (
+            self.image_generation_service.generate_images(
+                image_prompts=image_prompts,
+            )
+        )
+
+        return {
+            "images": [
+                image.path
+                for image in generated_images
+            ]
         }

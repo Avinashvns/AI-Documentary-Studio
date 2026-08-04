@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 from app.ai.graph.documentary_graph import create_documentary_graph
+from app.image_generation.models import GeneratedImage
 from app.schemas.image_prompt import ImagePrompt
 from app.schemas.research import ResearchResult
 from app.schemas.scene import Scene
@@ -53,6 +54,16 @@ def test_documentary_graph():
         )
     ]
 
+    generated_images = [
+        GeneratedImage(
+            path="scene_1.png",
+            width=768,
+            height=432,
+            format="png",
+            provider="local",
+        )
+    ]
+
     research_agent = MagicMock()
     research_agent.run.return_value = research_result
 
@@ -65,11 +76,17 @@ def test_documentary_graph():
     image_prompt_agent = MagicMock()
     image_prompt_agent.run.return_value = image_prompts
 
+    image_generation_service = MagicMock()
+    image_generation_service.generate_images.return_value = (
+        generated_images
+    )
+
     graph = create_documentary_graph(
         research_agent=research_agent,
         script_agent=script_agent,
         scene_planner_agent=scene_planner_agent,
         image_prompt_agent=image_prompt_agent,
+        image_generation_service=image_generation_service,
     )
 
     initial_state = {
@@ -98,18 +115,29 @@ def test_documentary_graph():
     assert result["scenes"] == scenes
     assert result["image_prompts"] == image_prompts
 
+    assert result["images"] == [
+        "scene_1.png",
+    ]
+
     research_agent.run.assert_called_once()
+
     script_agent.run.assert_called_once_with(
         research=research_result,
         language="Hindi",
     )
+
     scene_planner_agent.run.assert_called_once_with(
         script=script_result,
         duration=10,
     )
+
     image_prompt_agent.run.assert_called_once_with(
         scenes=scenes,
         style="historical documentary",
+    )
+
+    image_generation_service.generate_images.assert_called_once_with(
+        image_prompts=image_prompts,
     )
 
 
@@ -154,6 +182,7 @@ def test_documentary_graph_execution_order():
     script_agent = MagicMock()
     scene_planner_agent = MagicMock()
     image_prompt_agent = MagicMock()
+    image_generation_service = MagicMock()
 
     def research_run(*args, **kwargs):
         execution_order.append("research")
@@ -171,16 +200,36 @@ def test_documentary_graph_execution_order():
         execution_order.append("image_prompt")
         return image_prompts
 
+    def image_generation_run(*args, **kwargs):
+        execution_order.append(
+            "image_generation"
+        )
+
+        return [
+            GeneratedImage(
+                path="scene_1.png",
+                width=768,
+                height=432,
+                format="png",
+                provider="local",
+            )
+        ]
+
     research_agent.run.side_effect = research_run
     script_agent.run.side_effect = script_run
     scene_planner_agent.run.side_effect = scene_run
     image_prompt_agent.run.side_effect = image_prompt_run
+
+    image_generation_service.generate_images.side_effect = (
+        image_generation_run
+    )
 
     graph = create_documentary_graph(
         research_agent=research_agent,
         script_agent=script_agent,
         scene_planner_agent=scene_planner_agent,
         image_prompt_agent=image_prompt_agent,
+        image_generation_service=image_generation_service,
     )
 
     initial_state = {
@@ -207,4 +256,5 @@ def test_documentary_graph_execution_order():
         "script",
         "scene_planner",
         "image_prompt",
+        "image_generation",
     ]
