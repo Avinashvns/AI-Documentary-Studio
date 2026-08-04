@@ -3,3 +3,6 @@ class ResearchAgentError(Exception):
 
 class ScriptAgentError(Exception):
     """Raised when script generation fails."""
+
+class ScenePlannerAgentError(Exception):
+    """Raised when scene planning fails."""
