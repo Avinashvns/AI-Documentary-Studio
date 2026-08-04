@@ -1,71 +1,161 @@
-from typing import Any
-
-import httpx
+import json
+import subprocess
+from pathlib import Path
 
 from app.image_generation.config.settings import image_settings
 from app.image_generation.exceptions import ImageProviderError
+from app.image_generation.models import GeneratedImage
+from app.image_generation.providers.base import ImageProvider
 
 
-class ComfyUIClient:
+class ComfyUIImageProvider(ImageProvider):
     """
-    Thin adapter around the ComfyUI server API.
-
-    Image generation itself is handled entirely by ComfyUI.
+    Local image provider powered by ComfyUI through Comfy CLI.
     """
 
     def __init__(
         self,
-        base_url: str | None = None,
-        client: httpx.Client | None = None,
+        checkpoint: str = "dreamshaper_8.safetensors",
     ):
-        self.base_url = (
-            base_url
-            or image_settings.comfyui_base_url
-        ).rstrip("/")
+        self.checkpoint = checkpoint
 
-        self.client = client or httpx.Client(
-            timeout=image_settings.image_timeout
+    def generate(
+        self,
+        prompt: str,
+        negative_prompt: str = "",
+        width: int = 768,
+        height: int = 432,
+    ) -> GeneratedImage:
+        command = self._build_command(
+            prompt=prompt,
+            negative_prompt=negative_prompt,
+            width=width,
+            height=height,
         )
 
-    def health_check(self) -> bool:
         try:
-            response = self.client.get(
-                f"{self.base_url}/system_stats"
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=image_settings.image_timeout,
             )
 
-            response.raise_for_status()
+        except subprocess.TimeoutExpired as exc:
+            raise ImageProviderError(
+                "ComfyUI image generation timed out."
+            ) from exc
 
-            return True
+        except subprocess.CalledProcessError as exc:
+            error = exc.stderr or exc.stdout
 
-        except httpx.HTTPError:
-            return False
+            raise ImageProviderError(
+                f"ComfyUI image generation failed: {error}"
+            ) from exc
 
-    def queue_workflow(
+        output_path = self._extract_output_path(
+            result.stdout
+        )
+
+        return GeneratedImage(
+            path=str(output_path),
+            width=width,
+            height=height,
+            format=output_path.suffix.lstrip("."),
+            provider="local",
+        )
+
+    def _build_command(
         self,
-        workflow: dict[str, Any],
-    ) -> str:
-        try:
-            response = self.client.post(
-                f"{self.base_url}/prompt",
-                json={
-                    "prompt": workflow,
-                },
+        prompt: str,
+        negative_prompt: str,
+        width: int,
+        height: int,
+    ) -> list[str]:
+        return [
+            "comfy",
+            "run",
+            "--prompt",
+            prompt,
+            "--set",
+            f"checkpoint={self.checkpoint}",
+            "--set",
+            f"negative={negative_prompt}",
+            "--set",
+            f"width={width}",
+            "--set",
+            f"height={height}",
+            "--set",
+            "steps=20",
+            "--set",
+            "cfg=7",
+            "--wait",
+            "--where",
+            "local",
+            "--json",
+        ]
+
+    @staticmethod
+    def _extract_output_path(
+        stdout: str,
+    ) -> Path:
+        """
+        Extract generated image path from Comfy CLI NDJSON output.
+        """
+
+        for line in stdout.splitlines():
+            line = line.strip()
+
+            if not line:
+                continue
+
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+            path = ComfyUIImageProvider._find_image_path(
+                event
             )
 
-            response.raise_for_status()
+            if path is not None:
+                return Path(path)
 
-            data = response.json()
+        raise ImageProviderError(
+            "ComfyUI completed but no image output was found."
+        )
 
-            prompt_id = data.get("prompt_id")
+    @staticmethod
+    def _find_image_path(
+        value,
+    ) -> str | None:
+        """
+        Recursively search a Comfy CLI event for an image path.
+        """
 
-            if not prompt_id:
-                raise ImageProviderError(
-                    "ComfyUI did not return prompt_id."
+        if isinstance(value, str):
+            if value.lower().endswith(
+                (".png", ".jpg", ".jpeg", ".webp")
+            ):
+                return value
+
+        elif isinstance(value, dict):
+            for item in value.values():
+                result = ComfyUIImageProvider._find_image_path(
+                    item
                 )
 
-            return prompt_id
+                if result is not None:
+                    return result
 
-        except httpx.HTTPError as exc:
-            raise ImageProviderError(
-                f"Failed to communicate with ComfyUI: {exc}"
-            ) from exc
+        elif isinstance(value, list):
+            for item in value:
+                result = ComfyUIImageProvider._find_image_path(
+                    item
+                )
+
+                if result is not None:
+                    return result
+
+        return None
