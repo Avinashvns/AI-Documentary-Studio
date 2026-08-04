@@ -1,6 +1,7 @@
 from app.image_generation.models import GeneratedImage
 from app.image_generation.providers.base import ImageProvider
 from app.image_generation.providers.factory import ImageProviderFactory
+from app.image_generation.validation import ImageValidator
 from app.schemas.image_prompt import ImagePrompt
 
 
@@ -15,10 +16,16 @@ class ImageGenerationService:
     def __init__(
         self,
         provider: ImageProvider | None = None,
+        validator: ImageValidator | None = None,
     ):
         self.provider = (
             provider
             or ImageProviderFactory.create("local")
+        )
+
+        self.validator = (
+            validator
+            or ImageValidator()
         )
 
     def generate_image(
@@ -28,15 +35,21 @@ class ImageGenerationService:
         height: int = 432,
     ) -> GeneratedImage:
         """
-        Generate a single documentary scene image.
+        Generate and validate a single documentary scene image.
         """
 
-        return self.provider.generate(
+        generated_image = self.provider.generate(
             prompt=image_prompt.prompt,
             negative_prompt=image_prompt.negative_prompt,
             width=width,
             height=height,
         )
+
+        validated_image = self.validator.validate(
+            generated_image
+        )
+
+        return validated_image
 
     def generate_images(
         self,
@@ -45,7 +58,8 @@ class ImageGenerationService:
         height: int = 432,
     ) -> list[GeneratedImage]:
         """
-        Generate images for multiple documentary scenes.
+        Generate and validate images for multiple
+        documentary scenes.
         """
 
         return [

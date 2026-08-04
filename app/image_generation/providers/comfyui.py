@@ -39,7 +39,7 @@ class ComfyUIImageProvider(ImageProvider):
                 capture_output=True,
                 text=True,
                 check=True,
-                timeout=image_settings.image_timeout,
+                timeout=180,
             )
 
         except subprocess.TimeoutExpired as exc:
@@ -48,10 +48,20 @@ class ComfyUIImageProvider(ImageProvider):
             ) from exc
 
         except subprocess.CalledProcessError as exc:
-            error = exc.stderr or exc.stdout
+            error_message = (
+                exc.stderr
+                or exc.stdout
+                or "Unknown ComfyUI error."
+            )
 
             raise ImageProviderError(
-                f"ComfyUI image generation failed: {error}"
+                f"ComfyUI image generation failed: "
+                f"{error_message.strip()}"
+            ) from exc
+
+        except OSError as exc:
+            raise ImageProviderError(
+                "Unable to execute Comfy CLI."
             ) from exc
 
         output_path = self._extract_output_path(

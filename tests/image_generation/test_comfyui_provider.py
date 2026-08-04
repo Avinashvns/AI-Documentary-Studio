@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+import subprocess
 import pytest
 
 from app.image_generation.exceptions import ImageProviderError
@@ -9,6 +10,10 @@ from app.image_generation.providers.comfyui import (
 
 from app.image_generation.providers import (
     ImageProviderFactory,
+)
+
+from app.image_generation.exceptions import (
+    ImageProviderError,
 )
 
 
@@ -116,3 +121,55 @@ def test_factory_creates_comfyui_provider():
         provider,
         ComfyUIImageProvider,
     )
+
+
+@patch(
+    "app.image_generation.providers.comfyui.subprocess.run"
+)
+def test_generate_timeout(mock_run):
+    mock_run.side_effect = (
+        subprocess.TimeoutExpired(
+            cmd=["comfy", "run"],
+            timeout=180,
+        )
+    )
+
+    provider = ComfyUIImageProvider()
+
+    with pytest.raises(
+        ImageProviderError,
+        match="timed out",
+    ):
+        provider.generate(
+            prompt="historical palace",
+            negative_prompt="blurry",
+            width=768,
+            height=432,
+        )
+
+
+
+@patch(
+    "app.image_generation.providers.comfyui.subprocess.run"
+)
+def test_generate_cli_failure(mock_run):
+    mock_run.side_effect = (
+        subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["comfy", "run"],
+            stderr="ComfyUI server unavailable",
+        )
+    )
+
+    provider = ComfyUIImageProvider()
+
+    with pytest.raises(
+        ImageProviderError,
+        match="server unavailable",
+    ):
+        provider.generate(
+            prompt="historical palace",
+            negative_prompt="blurry",
+            width=768,
+            height=432,
+        )
