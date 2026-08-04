@@ -14,6 +14,12 @@ class ImageGenerationSettings(BaseSettings):
     image_timeout: int = 300
     image_max_retries: int = 2
 
+    comfyui_base_url: str = "http://127.0.0.1:8188"
+
+    comfyui_workflow_path: str = (
+        "app/image_generation/workflows/text_to_image.json"
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -22,3 +28,4 @@ class ImageGenerationSettings(BaseSettings):
 
 
 image_settings = ImageGenerationSettings()
+
