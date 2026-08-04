@@ -56,7 +56,20 @@ def test_documentary_graph():
 
     generated_images = [
         GeneratedImage(
-            path="scene_1.png",
+            path="ComfyUI_00001_.png",
+            width=768,
+            height=432,
+            format="png",
+            provider="local",
+        )
+    ]
+
+    organized_images = [
+        GeneratedImage(
+            path=(
+                "outputs/documentaries/"
+                "mughal-empire/images/scene_001.png"
+            ),
             width=768,
             height=432,
             format="png",
@@ -81,12 +94,18 @@ def test_documentary_graph():
         generated_images
     )
 
+    image_output_manager = MagicMock()
+    image_output_manager.save_images.return_value = (
+        organized_images
+    )
+
     graph = create_documentary_graph(
         research_agent=research_agent,
         script_agent=script_agent,
         scene_planner_agent=scene_planner_agent,
         image_prompt_agent=image_prompt_agent,
         image_generation_service=image_generation_service,
+        image_output_manager=image_output_manager,
     )
 
     initial_state = {
@@ -116,7 +135,10 @@ def test_documentary_graph():
     assert result["image_prompts"] == image_prompts
 
     assert result["images"] == [
-        "scene_1.png",
+        (
+            "outputs/documentaries/"
+            "mughal-empire/images/scene_001.png"
+        )
     ]
 
     research_agent.run.assert_called_once()
@@ -138,6 +160,11 @@ def test_documentary_graph():
 
     image_generation_service.generate_images.assert_called_once_with(
         image_prompts=image_prompts,
+    )
+
+    image_output_manager.save_images.assert_called_once_with(
+        images=generated_images,
+        topic="Mughal Empire",
     )
 
 
@@ -178,11 +205,35 @@ def test_documentary_graph_execution_order():
         )
     ]
 
+    generated_images = [
+        GeneratedImage(
+            path="ComfyUI_00001_.png",
+            width=768,
+            height=432,
+            format="png",
+            provider="local",
+        )
+    ]
+
+    organized_images = [
+        GeneratedImage(
+            path=(
+                "outputs/documentaries/"
+                "mughal-empire/images/scene_001.png"
+            ),
+            width=768,
+            height=432,
+            format="png",
+            provider="local",
+        )
+    ]
+
     research_agent = MagicMock()
     script_agent = MagicMock()
     scene_planner_agent = MagicMock()
     image_prompt_agent = MagicMock()
     image_generation_service = MagicMock()
+    image_output_manager = MagicMock()
 
     def research_run(*args, **kwargs):
         execution_order.append("research")
@@ -205,15 +256,7 @@ def test_documentary_graph_execution_order():
             "image_generation"
         )
 
-        return [
-            GeneratedImage(
-                path="scene_1.png",
-                width=768,
-                height=432,
-                format="png",
-                provider="local",
-            )
-        ]
+        return generated_images
 
     research_agent.run.side_effect = research_run
     script_agent.run.side_effect = script_run
@@ -224,12 +267,17 @@ def test_documentary_graph_execution_order():
         image_generation_run
     )
 
+    image_output_manager.save_images.return_value = (
+        organized_images
+    )
+
     graph = create_documentary_graph(
         research_agent=research_agent,
         script_agent=script_agent,
         scene_planner_agent=scene_planner_agent,
         image_prompt_agent=image_prompt_agent,
         image_generation_service=image_generation_service,
+        image_output_manager=image_output_manager,
     )
 
     initial_state = {
@@ -249,7 +297,7 @@ def test_documentary_graph_execution_order():
         "output_video": "",
     }
 
-    graph.invoke(initial_state)
+    result = graph.invoke(initial_state)
 
     assert execution_order == [
         "research",
@@ -258,3 +306,15 @@ def test_documentary_graph_execution_order():
         "image_prompt",
         "image_generation",
     ]
+
+    assert result["images"] == [
+        (
+            "outputs/documentaries/"
+            "mughal-empire/images/scene_001.png"
+        )
+    ]
+
+    image_output_manager.save_images.assert_called_once_with(
+        images=generated_images,
+        topic="Mughal Empire",
+    )

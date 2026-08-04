@@ -7,6 +7,11 @@ from app.ai.state.documentary_state import DocumentaryState
 from app.schemas.request import DocumentaryRequest
 from app.image_generation.services import ImageGenerationService
 
+from app.image_generation.services import (
+    ImageGenerationService,
+    ImageOutputManager,
+)
+
 
 class DocumentaryNodes:
     def __init__(
@@ -16,6 +21,7 @@ class DocumentaryNodes:
         scene_planner_agent: ScenePlannerAgent,
         image_prompt_agent: ImagePromptAgent,
         image_generation_service: ImageGenerationService | None = None,
+        image_output_manager: ImageOutputManager | None = None,
     ):
         self.research_agent = research_agent
         self.script_agent = script_agent
@@ -24,6 +30,11 @@ class DocumentaryNodes:
         self.image_generation_service = (
             image_generation_service
             or ImageGenerationService()
+        )
+
+        self.image_output_manager = (
+            image_output_manager
+            or ImageOutputManager()
         )
 
     def research_node(
@@ -119,9 +130,16 @@ class DocumentaryNodes:
             )
         )
 
+        organized_images = (
+            self.image_output_manager.save_images(
+                images=generated_images,
+                topic=state["topic"],
+            )
+        )
+
         return {
             "images": [
                 image.path
-                for image in generated_images
+                for image in organized_images
             ]
         }

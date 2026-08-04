@@ -9,6 +9,10 @@ from app.ai.graph.nodes import DocumentaryNodes
 from app.ai.state.documentary_state import DocumentaryState
 from app.image_generation.services import ImageGenerationService
 
+from app.image_generation.services import (
+    ImageOutputManager,
+)
+
 
 def create_documentary_graph(
     research_agent: ResearchAgent | None = None,
@@ -16,6 +20,7 @@ def create_documentary_graph(
     scene_planner_agent: ScenePlannerAgent | None = None,
     image_prompt_agent: ImagePromptAgent | None = None,
     image_generation_service: ImageGenerationService | None = None,
+    image_output_manager: ImageOutputManager | None = None,
 ):
     research_agent = research_agent or ResearchAgent()
     script_agent = script_agent or ScriptAgent()
@@ -32,6 +37,7 @@ def create_documentary_graph(
         scene_planner_agent=scene_planner_agent,
         image_prompt_agent=image_prompt_agent,
         image_generation_service=image_generation_service,
+        image_output_manager=image_output_manager,
     )
 
     workflow = StateGraph(DocumentaryState)
