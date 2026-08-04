@@ -6,3 +6,6 @@ class ScriptAgentError(Exception):
 
 class ScenePlannerAgentError(Exception):
     """Raised when scene planning fails."""
+
+class ImagePromptAgentError(Exception):
+    """Raised when image prompt generation fails."""
