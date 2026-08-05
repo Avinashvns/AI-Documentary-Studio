@@ -1,4 +1,14 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
+
+
+CameraMotion = Literal[
+    "Zoom In",
+    "Zoom Out",
+    "Pan Left",
+    "Pan Right",
+]
 
 
 class AnimationInstruction(BaseModel):
@@ -12,4 +22,4 @@ class AnimationInstruction(BaseModel):
 
     negative_prompt: str = ""
 
-    camera_motion: str = "Zoom In"
+    camera_motion: CameraMotion = "Zoom In"
