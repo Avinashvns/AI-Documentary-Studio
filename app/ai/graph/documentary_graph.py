@@ -1,5 +1,6 @@
 from langgraph.graph import END, START, StateGraph
 
+from app.agents.animation_agent import AnimationAgent
 from app.agents.image_prompt import ImagePromptAgent
 from app.agents.research import ResearchAgent
 from app.agents.scene_planner import ScenePlannerAgent
@@ -13,12 +14,18 @@ from app.image_generation.services import (
     ImageOutputManager,
 )
 
+from app.animation.services.animation_service import (
+    AnimationService,
+)
+
 
 def create_documentary_graph(
     research_agent: ResearchAgent | None = None,
     script_agent: ScriptAgent | None = None,
     scene_planner_agent: ScenePlannerAgent | None = None,
     image_prompt_agent: ImagePromptAgent | None = None,
+    animation_agent: AnimationAgent | None = None,
+    animation_service: AnimationService | None = None,
     image_generation_service: ImageGenerationService | None = None,
     image_output_manager: ImageOutputManager | None = None,
 ):
@@ -31,11 +38,23 @@ def create_documentary_graph(
         image_prompt_agent or ImagePromptAgent()
     )
 
+    if animation_agent is None:
+            raise ValueError(
+                "animation_agent is required."
+            )
+    
+    if animation_service is None:
+            raise ValueError(
+                "animation_service is required."
+            )
+
     nodes = DocumentaryNodes(
         research_agent=research_agent,
         script_agent=script_agent,
         scene_planner_agent=scene_planner_agent,
         image_prompt_agent=image_prompt_agent,
+        animation_agent=animation_agent,
+        animation_service=animation_service,
         image_generation_service=image_generation_service,
         image_output_manager=image_output_manager,
     )
@@ -67,6 +86,16 @@ def create_documentary_graph(
         nodes.image_generation_node,
     )
 
+    workflow.add_node(
+        "animation_planning",
+        nodes.animation_planning_node,
+    )
+
+    workflow.add_node(
+        "animation_generation",
+        nodes.animation_generation_node,
+    )
+
     workflow.add_edge(
         START,
         "research",
@@ -94,6 +123,16 @@ def create_documentary_graph(
 
     workflow.add_edge(
         "image_generation",
+        "animation_planning",
+    )
+
+    workflow.add_edge(
+        "animation_planning",
+        "animation_generation",
+    )
+
+    workflow.add_edge(
+        "animation_generation",
         END,
     )
 

@@ -62,6 +62,8 @@ def test_image_generation_node():
         script_agent=MagicMock(),
         scene_planner_agent=MagicMock(),
         image_prompt_agent=MagicMock(),
+        animation_agent=MagicMock(),
+        animation_service=MagicMock(),
         image_generation_service=service,
         image_output_manager=output_manager,
     )
@@ -118,6 +120,8 @@ def test_image_generation_node_empty_prompts():
         script_agent=MagicMock(),
         scene_planner_agent=MagicMock(),
         image_prompt_agent=MagicMock(),
+        animation_agent=MagicMock(),
+        animation_service=MagicMock(),
         image_generation_service=service,
         image_output_manager=output_manager,
     )

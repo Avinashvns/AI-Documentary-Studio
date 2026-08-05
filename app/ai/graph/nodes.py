@@ -5,12 +5,14 @@ from app.agents.script import ScriptAgent
 
 from app.ai.state.documentary_state import DocumentaryState
 from app.schemas.request import DocumentaryRequest
-from app.image_generation.services import ImageGenerationService
 
 from app.image_generation.services import (
     ImageGenerationService,
     ImageOutputManager,
 )
+
+from app.agents.animation_agent import AnimationAgent
+from app.animation.services.animation_service import AnimationService
 
 
 class DocumentaryNodes:
@@ -20,6 +22,8 @@ class DocumentaryNodes:
         script_agent: ScriptAgent,
         scene_planner_agent: ScenePlannerAgent,
         image_prompt_agent: ImagePromptAgent,
+        animation_agent: AnimationAgent,
+        animation_service: AnimationService,
         image_generation_service: ImageGenerationService | None = None,
         image_output_manager: ImageOutputManager | None = None,
     ):
@@ -27,6 +31,10 @@ class DocumentaryNodes:
         self.script_agent = script_agent
         self.scene_planner_agent = scene_planner_agent
         self.image_prompt_agent = image_prompt_agent
+
+        self.animation_agent = animation_agent
+        self.animation_service = animation_service
+
         self.image_generation_service = (
             image_generation_service
             or ImageGenerationService()
@@ -142,4 +150,75 @@ class DocumentaryNodes:
                 image.path
                 for image in organized_images
             ]
+        }
+
+
+    def animation_planning_node(
+        self,
+        state: DocumentaryState,
+    ) -> dict:
+        scenes = state.get(
+            "scenes",
+            [],
+        )
+
+        if not scenes:
+            return {
+                "animation_instructions": [],
+            }
+
+        instructions = self.animation_agent.run(
+            scenes=scenes,
+        )
+
+        return {
+            "animation_instructions": instructions,
+        }
+
+
+    def animation_generation_node(
+        self,
+        state: DocumentaryState,
+    ) -> dict:
+        images = state.get(
+            "images",
+            [],
+        )
+
+        instructions = state.get(
+            "animation_instructions",
+            [],
+        )
+
+        if not images or not instructions:
+            return {
+                "animations": [],
+            }
+
+        if len(images) != len(instructions):
+            raise ValueError(
+                "Images and animation instructions "
+                "must have the same length."
+            )
+
+        animations = []
+
+        for image_path, instruction in zip(
+            images,
+            instructions,
+            strict=True,
+        ):
+            video = self.animation_service.generate_animation(
+                image_path=image_path,
+                prompt=instruction.prompt,
+                negative_prompt=instruction.negative_prompt,
+                camera_motion=instruction.camera_motion,
+            )
+
+            animations.append(
+                video.path
+            )
+
+        return {
+            "animations": animations,
         }

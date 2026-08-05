@@ -1,5 +1,6 @@
 from typing import TypedDict
 
+from app.schemas.animation import AnimationInstruction
 from app.schemas.research import ResearchResult
 from app.schemas.script import ScriptResult
 from app.schemas.scene import Scene
@@ -29,6 +30,12 @@ class DocumentaryState(TypedDict):
     # Image Generation
     image_prompts: list[ImagePrompt]
     images: list[str]
+
+     # Animation
+    animation_instructions: list[
+        AnimationInstruction
+    ]
+    animations: list[str]
 
     # Voice
     narration: str

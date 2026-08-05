@@ -1,7 +1,9 @@
 from unittest.mock import MagicMock
 
 from app.ai.graph.documentary_graph import create_documentary_graph
+from app.animation.models import GeneratedVideo
 from app.image_generation.models import GeneratedImage
+from app.schemas.animation import AnimationInstruction
 from app.schemas.image_prompt import ImagePrompt
 from app.schemas.research import ResearchResult
 from app.schemas.scene import Scene
@@ -77,6 +79,33 @@ def test_documentary_graph():
         )
     ]
 
+    animation_instructions = [
+        AnimationInstruction(
+            scene_number=1,
+            prompt=(
+                "cinematic historical documentary, "
+                "subtle natural movement"
+            ),
+            negative_prompt=(
+                "flickering, jitter, watermark"
+            ),
+            camera_motion="Zoom In",
+        )
+    ]
+
+    generated_video = GeneratedVideo(
+        path=(
+            "outputs/documentaries/"
+            "mughal-empire/animations/"
+            "scene_001.mp4"
+        ),
+        width=512,
+        height=512,
+        fps=16,
+        frame_count=33,
+        provider="comfyui",
+    )
+
     research_agent = MagicMock()
     research_agent.run.return_value = research_result
 
@@ -99,11 +128,23 @@ def test_documentary_graph():
         organized_images
     )
 
+    animation_agent = MagicMock()
+    animation_agent.run.return_value = (
+        animation_instructions
+    )
+
+    animation_service = MagicMock()
+    animation_service.generate_animation.return_value = (
+        generated_video
+    )
+
     graph = create_documentary_graph(
         research_agent=research_agent,
         script_agent=script_agent,
         scene_planner_agent=scene_planner_agent,
         image_prompt_agent=image_prompt_agent,
+        animation_agent=animation_agent,
+        animation_service=animation_service,
         image_generation_service=image_generation_service,
         image_output_manager=image_output_manager,
     )
@@ -118,6 +159,8 @@ def test_documentary_graph():
         "scenes": [],
         "image_prompts": [],
         "images": [],
+        "animation_instructions": [],
+        "animations": [],
         "narration": "",
         "audio_path": "",
         "music_path": "",
@@ -128,7 +171,6 @@ def test_documentary_graph():
     result = graph.invoke(initial_state)
 
     assert result["topic"] == "Mughal Empire"
-
     assert result["research"] == research_result
     assert result["script"] == script_result
     assert result["scenes"] == scenes
@@ -138,6 +180,19 @@ def test_documentary_graph():
         (
             "outputs/documentaries/"
             "mughal-empire/images/scene_001.png"
+        )
+    ]
+
+    assert (
+        result["animation_instructions"]
+        == animation_instructions
+    )
+
+    assert result["animations"] == [
+        (
+            "outputs/documentaries/"
+            "mughal-empire/animations/"
+            "scene_001.mp4"
         )
     ]
 
@@ -165,6 +220,25 @@ def test_documentary_graph():
     image_output_manager.save_images.assert_called_once_with(
         images=generated_images,
         topic="Mughal Empire",
+    )
+
+    animation_agent.run.assert_called_once_with(
+        scenes=scenes,
+    )
+
+    animation_service.generate_animation.assert_called_once_with(
+        image_path=(
+            "outputs/documentaries/"
+            "mughal-empire/images/"
+            "scene_001.png"
+        ),
+        prompt=animation_instructions[0].prompt,
+        negative_prompt=(
+            animation_instructions[0].negative_prompt
+        ),
+        camera_motion=(
+            animation_instructions[0].camera_motion
+        ),
     )
 
 
@@ -228,12 +302,32 @@ def test_documentary_graph_execution_order():
         )
     ]
 
+    animation_instructions = [
+        AnimationInstruction(
+            scene_number=1,
+            prompt="slow cinematic zoom",
+            negative_prompt="flickering",
+            camera_motion="Zoom In",
+        )
+    ]
+
+    generated_video = GeneratedVideo(
+        path="scene_001.mp4",
+        width=512,
+        height=512,
+        fps=16,
+        frame_count=33,
+        provider="comfyui",
+    )
+
     research_agent = MagicMock()
     script_agent = MagicMock()
     scene_planner_agent = MagicMock()
     image_prompt_agent = MagicMock()
     image_generation_service = MagicMock()
     image_output_manager = MagicMock()
+    animation_agent = MagicMock()
+    animation_service = MagicMock()
 
     def research_run(*args, **kwargs):
         execution_order.append("research")
@@ -255,8 +349,19 @@ def test_documentary_graph_execution_order():
         execution_order.append(
             "image_generation"
         )
-
         return generated_images
+
+    def animation_planning_run(*args, **kwargs):
+        execution_order.append(
+            "animation_planning"
+        )
+        return animation_instructions
+
+    def animation_generation_run(*args, **kwargs):
+        execution_order.append(
+            "animation_generation"
+        )
+        return generated_video
 
     research_agent.run.side_effect = research_run
     script_agent.run.side_effect = script_run
@@ -271,11 +376,21 @@ def test_documentary_graph_execution_order():
         organized_images
     )
 
+    animation_agent.run.side_effect = (
+        animation_planning_run
+    )
+
+    animation_service.generate_animation.side_effect = (
+        animation_generation_run
+    )
+
     graph = create_documentary_graph(
         research_agent=research_agent,
         script_agent=script_agent,
         scene_planner_agent=scene_planner_agent,
         image_prompt_agent=image_prompt_agent,
+        animation_agent=animation_agent,
+        animation_service=animation_service,
         image_generation_service=image_generation_service,
         image_output_manager=image_output_manager,
     )
@@ -290,6 +405,8 @@ def test_documentary_graph_execution_order():
         "scenes": [],
         "image_prompts": [],
         "images": [],
+        "animation_instructions": [],
+        "animations": [],
         "narration": "",
         "audio_path": "",
         "music_path": "",
@@ -305,6 +422,8 @@ def test_documentary_graph_execution_order():
         "scene_planner",
         "image_prompt",
         "image_generation",
+        "animation_planning",
+        "animation_generation",
     ]
 
     assert result["images"] == [
@@ -314,7 +433,34 @@ def test_documentary_graph_execution_order():
         )
     ]
 
+    assert (
+        result["animation_instructions"]
+        == animation_instructions
+    )
+
+    assert result["animations"] == [
+        "scene_001.mp4"
+    ]
+
     image_output_manager.save_images.assert_called_once_with(
         images=generated_images,
         topic="Mughal Empire",
+    )
+
+    animation_agent.run.assert_called_once_with(
+        scenes=scenes,
+    )
+
+    animation_service.generate_animation.assert_called_once_with(
+        image_path=(
+            "outputs/documentaries/"
+            "mughal-empire/images/scene_001.png"
+        ),
+        prompt=animation_instructions[0].prompt,
+        negative_prompt=(
+            animation_instructions[0].negative_prompt
+        ),
+        camera_motion=(
+            animation_instructions[0].camera_motion
+        ),
     )

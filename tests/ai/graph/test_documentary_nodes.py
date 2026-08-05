@@ -13,6 +13,8 @@ def create_nodes():
         script_agent=MagicMock(),
         scene_planner_agent=MagicMock(),
         image_prompt_agent=MagicMock(),
+        animation_agent=MagicMock(),
+        animation_service=MagicMock(),
     )
 
 
@@ -27,6 +29,8 @@ def create_state():
         "scenes": [],
         "image_prompts": [],
         "images": [],
+        "animation_instructions": [],
+        "animations": [],
         "narration": "",
         "audio_path": "",
         "music_path": "",
