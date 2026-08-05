@@ -158,6 +158,7 @@ def test_prepare_workflow(
         image_name="scene_002.png",
         prompt="slow cinematic zoom",
         negative_prompt="blurry",
+        camera_motion="Pan Right",
         width=640,
         height=360,
         frame_count=49,
@@ -177,6 +178,11 @@ def test_prepare_workflow(
     assert (
         prepared["7"]["inputs"]["text"]
         == "blurry"
+    )
+
+    assert (
+        prepared["57"]["inputs"]["camera_pose"]
+        == "Pan Right"
     )
 
     assert (

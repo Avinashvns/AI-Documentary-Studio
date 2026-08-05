@@ -17,6 +17,7 @@ class AnimationProvider(ABC):
         image_path: str,
         prompt: str,
         negative_prompt: str = "",
+        camera_motion: str = "Zoom In",
         width: int = 512,
         height: int = 512,
         frame_count: int = 33,

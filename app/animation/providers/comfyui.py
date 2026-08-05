@@ -43,6 +43,7 @@ class ComfyUIAnimationProvider(AnimationProvider):
         image_path: str,
         prompt: str,
         negative_prompt: str = "",
+        camera_motion: str = "Zoom In",
         width: int = 512,
         height: int = 512,
         frame_count: int = 33,
@@ -67,6 +68,7 @@ class ComfyUIAnimationProvider(AnimationProvider):
             image_name=uploaded_name,
             prompt=prompt,
             negative_prompt=negative_prompt,
+            camera_motion=camera_motion,
             width=width,
             height=height,
             frame_count=frame_count,
@@ -126,6 +128,7 @@ class ComfyUIAnimationProvider(AnimationProvider):
         image_name: str,
         prompt: str,
         negative_prompt: str,
+        camera_motion: str,
         width: int,
         height: int,
         frame_count: int,
@@ -148,6 +151,11 @@ class ComfyUIAnimationProvider(AnimationProvider):
         camera_inputs = workflow[
             self.CAMERA_NODE
         ]["inputs"]
+
+        camera_inputs["camera_pose"] = camera_motion
+        camera_inputs["width"] = width
+        camera_inputs["height"] = height
+        camera_inputs["length"] = frame_count
 
         camera_inputs["width"] = width
         camera_inputs["height"] = height
