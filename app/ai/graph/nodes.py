@@ -14,6 +14,8 @@ from app.image_generation.services import (
 from app.agents.animation_agent import AnimationAgent
 from app.animation.services.animation_service import AnimationService
 
+from app.voice.narration import NarrationService
+
 
 class DocumentaryNodes:
     def __init__(
@@ -24,6 +26,7 @@ class DocumentaryNodes:
         image_prompt_agent: ImagePromptAgent,
         animation_agent: AnimationAgent,
         animation_service: AnimationService,
+        narration_service: NarrationService | None = None,
         image_generation_service: ImageGenerationService | None = None,
         image_output_manager: ImageOutputManager | None = None,
     ):
@@ -34,6 +37,8 @@ class DocumentaryNodes:
 
         self.animation_agent = animation_agent
         self.animation_service = animation_service
+
+        self.narration_service = narration_service
 
         self.image_generation_service = (
             image_generation_service
@@ -221,4 +226,34 @@ class DocumentaryNodes:
 
         return {
             "animations": animations,
+        }
+
+
+    def narration_generation_node(
+        self,
+        state: DocumentaryState,
+    ) -> dict:
+        if self.narration_service is None:
+            raise RuntimeError(
+                "NarrationService is required "
+                "for narration generation."
+            )
+
+        scenes = state.get(
+            "scenes",
+            [],
+        )
+
+        if not scenes:
+            return {
+                "audio_paths": [],
+            }
+
+        audio_paths = self.narration_service.generate(
+            scenes=scenes,
+            topic=state["topic"],
+        )
+
+        return {
+            "audio_paths": audio_paths,
         }

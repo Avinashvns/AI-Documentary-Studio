@@ -22,7 +22,9 @@ def test_documentary_graph():
     script_result = ScriptResult(
         title="The Mughal Empire",
         hook="An empire that changed history.",
-        introduction="The story begins in the sixteenth century.",
+        introduction=(
+            "The story begins in the sixteenth century."
+        ),
         sections=[
             ScriptSection(
                 title="The Beginning",
@@ -106,6 +108,13 @@ def test_documentary_graph():
         provider="comfyui",
     )
 
+    audio_paths = [
+        (
+            "outputs/documentaries/"
+            "mughal-empire/audio/scene_001.mp3"
+        )
+    ]
+
     research_agent = MagicMock()
     research_agent.run.return_value = research_result
 
@@ -138,6 +147,9 @@ def test_documentary_graph():
         generated_video
     )
 
+    narration_service = MagicMock()
+    narration_service.generate.return_value = audio_paths
+
     graph = create_documentary_graph(
         research_agent=research_agent,
         script_agent=script_agent,
@@ -145,6 +157,7 @@ def test_documentary_graph():
         image_prompt_agent=image_prompt_agent,
         animation_agent=animation_agent,
         animation_service=animation_service,
+        narration_service=narration_service,
         image_generation_service=image_generation_service,
         image_output_manager=image_output_manager,
     )
@@ -161,8 +174,7 @@ def test_documentary_graph():
         "images": [],
         "animation_instructions": [],
         "animations": [],
-        "narration": "",
-        "audio_path": "",
+        "audio_paths": [],
         "music_path": "",
         "subtitles_path": "",
         "output_video": "",
@@ -195,6 +207,8 @@ def test_documentary_graph():
             "scene_001.mp4"
         )
     ]
+
+    assert result["audio_paths"] == audio_paths
 
     research_agent.run.assert_called_once()
 
@@ -241,6 +255,11 @@ def test_documentary_graph():
         ),
     )
 
+    narration_service.generate.assert_called_once_with(
+        scenes=scenes,
+        topic="Mughal Empire",
+    )
+
 
 def test_documentary_graph_execution_order():
     execution_order = []
@@ -274,7 +293,9 @@ def test_documentary_graph_execution_order():
     image_prompts = [
         ImagePrompt(
             scene_number=1,
-            prompt="Historical cinematic documentary image",
+            prompt=(
+                "Historical cinematic documentary image"
+            ),
             negative_prompt="text, watermark",
         )
     ]
@@ -320,6 +341,13 @@ def test_documentary_graph_execution_order():
         provider="comfyui",
     )
 
+    audio_paths = [
+        (
+            "outputs/documentaries/"
+            "mughal-empire/audio/scene_001.mp3"
+        )
+    ]
+
     research_agent = MagicMock()
     script_agent = MagicMock()
     scene_planner_agent = MagicMock()
@@ -328,6 +356,7 @@ def test_documentary_graph_execution_order():
     image_output_manager = MagicMock()
     animation_agent = MagicMock()
     animation_service = MagicMock()
+    narration_service = MagicMock()
 
     def research_run(*args, **kwargs):
         execution_order.append("research")
@@ -338,11 +367,15 @@ def test_documentary_graph_execution_order():
         return script_result
 
     def scene_run(*args, **kwargs):
-        execution_order.append("scene_planner")
+        execution_order.append(
+            "scene_planner"
+        )
         return scenes
 
     def image_prompt_run(*args, **kwargs):
-        execution_order.append("image_prompt")
+        execution_order.append(
+            "image_prompt"
+        )
         return image_prompts
 
     def image_generation_run(*args, **kwargs):
@@ -362,6 +395,12 @@ def test_documentary_graph_execution_order():
             "animation_generation"
         )
         return generated_video
+
+    def narration_generation_run(*args, **kwargs):
+        execution_order.append(
+            "narration_generation"
+        )
+        return audio_paths
 
     research_agent.run.side_effect = research_run
     script_agent.run.side_effect = script_run
@@ -384,6 +423,10 @@ def test_documentary_graph_execution_order():
         animation_generation_run
     )
 
+    narration_service.generate.side_effect = (
+        narration_generation_run
+    )
+
     graph = create_documentary_graph(
         research_agent=research_agent,
         script_agent=script_agent,
@@ -391,6 +434,7 @@ def test_documentary_graph_execution_order():
         image_prompt_agent=image_prompt_agent,
         animation_agent=animation_agent,
         animation_service=animation_service,
+        narration_service=narration_service,
         image_generation_service=image_generation_service,
         image_output_manager=image_output_manager,
     )
@@ -407,8 +451,7 @@ def test_documentary_graph_execution_order():
         "images": [],
         "animation_instructions": [],
         "animations": [],
-        "narration": "",
-        "audio_path": "",
+        "audio_paths": [],
         "music_path": "",
         "subtitles_path": "",
         "output_video": "",
@@ -424,6 +467,7 @@ def test_documentary_graph_execution_order():
         "image_generation",
         "animation_planning",
         "animation_generation",
+        "narration_generation",
     ]
 
     assert result["images"] == [
@@ -441,6 +485,8 @@ def test_documentary_graph_execution_order():
     assert result["animations"] == [
         "scene_001.mp4"
     ]
+
+    assert result["audio_paths"] == audio_paths
 
     image_output_manager.save_images.assert_called_once_with(
         images=generated_images,
@@ -463,4 +509,9 @@ def test_documentary_graph_execution_order():
         camera_motion=(
             animation_instructions[0].camera_motion
         ),
+    )
+
+    narration_service.generate.assert_called_once_with(
+        scenes=scenes,
+        topic="Mughal Empire",
     )

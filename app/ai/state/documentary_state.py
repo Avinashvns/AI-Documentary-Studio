@@ -37,9 +37,8 @@ class DocumentaryState(TypedDict):
     ]
     animations: list[str]
 
-    # Voice
-    narration: str
-    audio_path: str
+    # Voice / Narration
+    audio_paths: list[str]
 
     # Music
     music_path: str

@@ -18,6 +18,8 @@ from app.animation.services.animation_service import (
     AnimationService,
 )
 
+from app.voice.narration import NarrationService
+
 
 def create_documentary_graph(
     research_agent: ResearchAgent | None = None,
@@ -26,6 +28,7 @@ def create_documentary_graph(
     image_prompt_agent: ImagePromptAgent | None = None,
     animation_agent: AnimationAgent | None = None,
     animation_service: AnimationService | None = None,
+    narration_service: NarrationService | None = None,
     image_generation_service: ImageGenerationService | None = None,
     image_output_manager: ImageOutputManager | None = None,
 ):
@@ -55,6 +58,7 @@ def create_documentary_graph(
         image_prompt_agent=image_prompt_agent,
         animation_agent=animation_agent,
         animation_service=animation_service,
+        narration_service=narration_service,
         image_generation_service=image_generation_service,
         image_output_manager=image_output_manager,
     )
@@ -96,6 +100,11 @@ def create_documentary_graph(
         nodes.animation_generation_node,
     )
 
+    workflow.add_node(
+        "narration_generation",
+        nodes.narration_generation_node,
+    )
+
     workflow.add_edge(
         START,
         "research",
@@ -133,6 +142,11 @@ def create_documentary_graph(
 
     workflow.add_edge(
         "animation_generation",
+        "narration_generation",
+    )
+
+    workflow.add_edge(
+        "narration_generation",
         END,
     )
 
